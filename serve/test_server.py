@@ -517,6 +517,18 @@ class ClientShapes(unittest.TestCase):
         self.assertEqual(list(v.dir.iterdir()), [])
         v.dir.rmdir()
 
+    def test_vision_lazy_encoder_starts_on_first_load(self):
+        # a --lazy server creates the encoder stopped: nothing runs until the first load starts it
+        from serve.server import Vision
+        with mock.patch.object(Vision, "_start") as start:
+            v = Vision({"exe": "strata-vision", "mmproj": "m.gguf", "model": "g.gguf", "gpu": True}, start=False)
+            start.assert_not_called()
+            self.assertFalse(v.alive())
+            v.close()                                   # nothing to stop yet
+            v.restart()
+            start.assert_called_once()
+        v.dir.rmdir()
+
     def test_leading_system_unchanged(self):
         from serve.frontend import anthropic_to_messages, openai_to_messages
         msgs, _, _ = openai_to_messages({"messages": [{"role": "developer", "content": "D"}, {"role": "user", "content": "u"}]})
